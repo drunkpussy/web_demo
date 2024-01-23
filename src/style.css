@@ -39,6 +39,6 @@ svg rect {
 
 svg.ended {
   transform: scale(3);
-  transform-origin: 50% 50%;
+  transform-origin: 25% 50%;
   transition: transform 1.5s ease-in-out;
 }/*# sourceMappingURL=style.css.map */
