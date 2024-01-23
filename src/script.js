@@ -10,6 +10,7 @@ import portalFragmentShader from './shaders/portal/fragment.glsl';
 import outlineVertexShader from './shaders/outline/vertex.glsl';
 import outlineFragmentShader from './shaders/outline/fragment.glsl';
 
+import { gsap } from 'gsap';
 
 /**
  * Base
@@ -28,20 +29,63 @@ gui.hide();
 const canvas = document.querySelector('canvas.webgl')
 
 // Scene
-const scene = new THREE.Scene()
+const scene = new THREE.Scene();
+
+/**
+ * Overlay
+ */
+const overlayGeometry = new THREE.PlaneGeometry(2, 2, 1, 1);
+const overlayMaterial = new THREE.ShaderMaterial({ 
+    // wireframe: true,
+    uniforms: {
+        uAlpha: { value: 1 },
+    },
+    vertexShader: `
+        void main() {
+            gl_Position = vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform float uAlpha;
+
+        void main() {
+            gl_FragColor = vec4(0.0, 0.0, 0.0, uAlpha);
+        }
+    `,
+    transparent: true,
+ });
+const overlay = new THREE.Mesh(overlayGeometry, overlayMaterial);
+scene.add(overlay);
 
 /**
  * Loaders
  */
+const loadingBarElement = document.querySelector('.loading-bar');
+const svgElement = document.querySelector('.svg-element');
+const loadingManager = new THREE.LoadingManager(
+    // Loaded
+    () => {
+        // console.log('loaded');
+        gsap.to(overlayMaterial.uniforms.uAlpha, { duration: 3, value: 0 });
+        svgElement.classList.add('ended');
+        gsap.to(".svg-element", { duration: 1.5, display: 'none'});
+    },
+    // progress
+    (itemUrl, itemsLoaded, itemsTotal) => {
+        let progressRatio = itemsLoaded/itemsTotal;
+        loadingBarElement.style.transform = `translateY(-${progressRatio * 100}%)`;
+    }
+);
+
 // Texture loader
-const textureLoader = new THREE.TextureLoader()
+const textureLoader = new THREE.TextureLoader(loadingManager);
 
 // Draco loader
 const dracoLoader = new DRACOLoader()
 dracoLoader.setDecoderPath('draco/')
 
 // GLTF loader
-const gltfLoader = new GLTFLoader()
+const gltfLoader = new GLTFLoader(loadingManager);
 gltfLoader.setDRACOLoader(dracoLoader)
 
 /**
@@ -62,16 +106,6 @@ hairTexture.flipY = false;
 faceTranspTexture.flipY = false;
 clothTexture.flipY = false;
 bgTexture.flipY = false;
-
-// /**
-//  * Object
-//  */
-// const cube = new THREE.Mesh(
-//     new THREE.BoxGeometry(1, 1, 1),
-//     new THREE.MeshBasicMaterial()
-// )
-
-// scene.add(cube)
 
 // Mesh setup
 const solidify = (mesh) => {
@@ -244,11 +278,11 @@ const firefliesMaterial = new THREE.ShaderMaterial({
     uniforms: {
         uTime: { value: 0 },
         uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
-        uSize: { value: 200},
+        uSize: { value: 200 },
     },
     vertexShader: firefliesVertexShader,
     fragmentShader: firefliesFragmentShader,
-    transparent: true,
+    // transparent: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
  });
